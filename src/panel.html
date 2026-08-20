@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Simulación - AoW IoT Bridge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+  <div class="container mx-auto p-6 max-w-6xl">
+    <header class="mb-8 flex justify-between items-center border-b border-gray-800 pb-4">
+      <div>
+        <h1 class="text-3xl font-extrabold text-blue-400">AoW IoT Bridge</h1>
+        <p class="text-gray-400 text-sm">Panel de control de simuladores de dispositivos 4P-Touch</p>
+      </div>
+      <span class="px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-bold">Servidor TCP Activo</span>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Columna Izquierda: Crear / Editar -->
+      <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 h-fit">
+        <h2 class="text-xl font-bold mb-4 text-blue-300 border-b border-gray-700 pb-2">Crear Nuevo Simulador</h2>
+        <form id="createForm" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">IMEI del Dispositivo (15 dígitos)</label>
+            <input type="text" id="imeiInput" required minlength="15" maxlength="15" placeholder="123456789012345" 
+              class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Nombre / Identificación</label>
+            <input type="text" id="aliasInput" required placeholder="Reloj Juan" 
+              class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+          </div>
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition">
+            Crear y Conectar
+          </button>
+        </form>
+      </div>
+
+      <!-- Columna Derecha: Listado y Consola de Comandos -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Listado de Simuladores -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+          <h2 class="text-xl font-bold mb-4 text-blue-300 border-b border-gray-700 pb-2">Dispositivos Simulado Activos</h2>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-gray-700 text-gray-400 text-xs uppercase">
+                  <th class="py-2 px-4">IMEI</th>
+                  <th class="py-2 px-4">Nombre</th>
+                  <th class="py-2 px-4">Estado</th>
+                  <th class="py-2 px-4 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="simulatorsTable" class="divide-y divide-gray-700 text-sm">
+                <!-- Se inyecta dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Consola e Inyección de Eventos -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
+          <h2 class="text-xl font-bold mb-4 text-blue-300 border-b border-gray-700 pb-2">Enviar Comando manual a un dispositivo</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Seleccionar Simulador</label>
+              <select id="activeSimSelect" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none">
+                <!-- Se inyecta dinámicamente -->
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-400 uppercase mb-1">Tipo de Evento a Mandar</label>
+              <select id="eventTypeSelect" class="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none">
+                <option value="LK">LK (Keep-Alive)</option>
+                <option value="UD">UD (Ubicación GPS)</option>
+                <option value="LBS">LBS (Celular Fallback)</option>
+                <option value="WIFI">WIFI (MAC routers)</option>
+                <option value="bphrt">bphrt (Signos vitales)</option>
+                <option value="oxygen">oxygen (SpO2)</option>
+                <option value="btemp2">btemp2 (Temperatura)</option>
+                <option value="FALL">FALL (Caída detectada)</option>
+                <option value="REMOVE">REMOVE (Reloj quitado)</option>
+                <option value="AL">AL (SOS de Pánico)</option>
+              </select>
+            </div>
+          </div>
+          <button id="sendEventBtn" class="mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition">
+            Disparar Evento en Simulador
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadSimulators() {
+      const response = await fetch('/api/simulators');
+      const data = await response.json();
+      const tbody = document.getElementById('simulatorsTable');
+      const select = document.getElementById('activeSimSelect');
+      
+      tbody.innerHTML = '';
+      select.innerHTML = '';
+
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-gray-500">No hay simuladores activos en este momento.</td></tr>';
+        return;
+      }
+
+      data.forEach(sim => {
+        // Rellenar tabla
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-750';
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-mono">${sim.imei}</td>
+          <td class="py-3 px-4">${sim.alias}</td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 text-xs rounded font-bold ${sim.connected ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}">
+              ${sim.connected ? 'Conectado' : 'Desconectado'}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-right">
+            <button onclick="toggleSim('${sim.imei}')" class="text-xs bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-1 px-2 rounded mr-2">
+              ${sim.connected ? 'Desconectar' : 'Conectar'}
+            </button>
+            <button onclick="deleteSim('${sim.imei}')" class="text-xs bg-red-600 hover:bg-red-700 text-white font-semibold py-1 px-2 rounded">
+              Eliminar
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Rellenar selector de envíos si está conectado
+        if (sim.connected) {
+          const option = document.createElement('option');
+          option.value = sim.imei;
+          option.textContent = `${sim.alias} (${sim.imei})`;
+          select.appendChild(option);
+        }
+      });
+    }
+
+    document.getElementById('createForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const imei = document.getElementById('imeiInput').value;
+      const alias = document.getElementById('aliasInput').value;
+
+      await fetch('/api/simulators', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imei, alias })
+      });
+
+      document.getElementById('imeiInput').value = '';
+      document.getElementById('aliasInput').value = '';
+      loadSimulators();
+    });
+
+    async function toggleSim(imei) {
+      await fetch(`/api/simulators/${imei}/toggle`, { method: 'POST' });
+      loadSimulators();
+    }
+
+    async function deleteSim(imei) {
+      if (confirm('¿Seguro que deseas eliminar este simulador?')) {
+        await fetch(`/api/simulators/${imei}`, { method: 'DELETE' });
+        loadSimulators();
+      }
+    }
+
+    document.getElementById('sendEventBtn').addEventListener('click', async () => {
+      const imei = document.getElementById('activeSimSelect').value;
+      const eventType = document.getElementById('eventTypeSelect').value;
+      
+      if (!imei) {
+        alert('Selecciona un simulador conectado primero.');
+        return;
+      }
+
+      await fetch(`/api/simulators/${imei}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventType })
+      });
+      
+      alert('Comando/Evento enviado al servidor TCP exitosamente.');
+    });
+
+    // Auto-update cada 3 segundos
+    loadSimulators();
+    setInterval(loadSimulators, 3000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "aow-tcp-bridge",
+  "version": "1.0.0",
+  "description": "Puente de comunicación TCP entre dispositivos IoT (relojes y botones de emergencia) y Supabase usando Bun",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "simulator": "bun src/simulator.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
