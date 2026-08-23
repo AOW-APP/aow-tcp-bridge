@@ -12,6 +12,11 @@ export class ProtocolRouter {
   public static async route(socket: BunDeviceSocket, event: TelemetryEvent) {
     const { imei, type, manufacturer, commandType, payloadParts } = event;
 
+    // Persist raw frame for diagnostic/auditing logging
+    if (event.rawFrame) {
+      await DbService.insertRawFrame(imei, event.rawFrame, socket.remoteAddress);
+    }
+
     console.log(`\n[TCP Server] 📥 Processed Frame - IMEI: ${imei}, Type: ${commandType}`);
 
     // Register active device connection in the sessionStore

@@ -84,6 +84,7 @@ export class SeTrackerParser implements IProtocolParser {
     // Extract payload clean string
     const payload = decoder.decode(buffer.subarray(idx3 + 1, totalFrameLen - 1));
     const event = this.parsePayload(company, imei, payload);
+    event.rawFrame = decoder.decode(buffer.subarray(0, totalFrameLen));
 
     return { consumedBytes: totalFrameLen, event };
   }
@@ -114,7 +115,8 @@ export class SeTrackerParser implements IProtocolParser {
       }
 
       case 'UD':
-      case 'UD2': {
+      case 'UD2':
+      case 'UD_LTE': {
         const [
           _, date, time, gpsState, latStr, latDir, lonStr, lonDir, 
           speedStr, direction, altitude, satellites, gsmSignalStr, batteryPercentStr, stepsStr
@@ -125,18 +127,29 @@ export class SeTrackerParser implements IProtocolParser {
         baseEvent.steps = stepsStr ? parseInt(stepsStr, 10) : undefined;
         baseEvent.gsmSignal = gsmSignalStr ? parseInt(gsmSignalStr, 10) : undefined;
 
-        if (gpsState === 'A' || gpsState === 'V') {
+        const lat = this.parseCoordinate(latStr, latDir);
+        const lon = this.parseCoordinate(lonStr, lonDir);
+
+        if (gpsState === 'A' || (gpsState === 'V' && (lat !== 0 || lon !== 0))) {
           baseEvent.coords = {
-            lat: this.parseCoordinate(latStr, latDir),
-            lon: this.parseCoordinate(lonStr, lonDir),
+            lat,
+            lon,
             gpsState,
             speed: speedStr ? parseFloat(speedStr) : 0
+          };
+        } else if (parts[18] && parts[19] && parts[20] && parts[21]) {
+          baseEvent.lbs = {
+            mcc: parseInt(parts[18], 10),
+            mnc: parseInt(parts[19], 10),
+            lac: parseInt(parts[20], 10),
+            cellId: parseInt(parts[21], 10)
           };
         }
         return baseEvent;
       }
 
-      case 'AL': {
+      case 'AL':
+      case 'AL_LTE': {
         const [
           _, date, time, gpsState, latStr, latDir, lonStr, lonDir, 
           speedStr, direction, altitude, satellites, gsmSignalStr, batteryPercentStr, stepsStr
@@ -148,12 +161,22 @@ export class SeTrackerParser implements IProtocolParser {
         baseEvent.steps = stepsStr ? parseInt(stepsStr, 10) : undefined;
         baseEvent.gsmSignal = gsmSignalStr ? parseInt(gsmSignalStr, 10) : undefined;
 
-        if (gpsState === 'A' || gpsState === 'V') {
+        const lat = this.parseCoordinate(latStr, latDir);
+        const lon = this.parseCoordinate(lonStr, lonDir);
+
+        if (gpsState === 'A' || (gpsState === 'V' && (lat !== 0 || lon !== 0))) {
           baseEvent.coords = {
-            lat: this.parseCoordinate(latStr, latDir),
-            lon: this.parseCoordinate(lonStr, lonDir),
+            lat,
+            lon,
             gpsState,
             speed: speedStr ? parseFloat(speedStr) : 0
+          };
+        } else if (parts[18] && parts[19] && parts[20] && parts[21]) {
+          baseEvent.lbs = {
+            mcc: parseInt(parts[18], 10),
+            mnc: parseInt(parts[19], 10),
+            lac: parseInt(parts[20], 10),
+            cellId: parseInt(parts[21], 10)
           };
         }
         return baseEvent;

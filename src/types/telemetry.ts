@@ -28,6 +28,7 @@ export interface TelemetryEvent {
     cellId: number;
   };
   wifi?: { mac: string; rssi: number }[];
+  rawFrame?: string;
 }
 
 export interface IProtocolParser {

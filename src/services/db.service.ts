@@ -100,4 +100,23 @@ export class DbService {
       console.error(`[DB Error] Failed to insert alarm for IMEI ${imei}:`, err.message);
     }
   }
+
+  /**
+   * Inserts a raw packet/frame record in Supabase for audit and debugging.
+   */
+  public static async insertRawFrame(imei: string | undefined, rawData: string, clientIp?: string) {
+    try {
+      const { error } = await supabase
+        .from('device_raw_frames')
+        .insert({
+          imei: imei || null,
+          raw_data: rawData,
+          client_ip: clientIp || null,
+          received_at: new Date().toISOString()
+        });
+      if (error) throw error;
+    } catch (err: any) {
+      console.error(`[DB Error] Failed to insert raw frame:`, err.message);
+    }
+  }
 }
