@@ -12,8 +12,9 @@ export class ProtocolRouter {
   public static async route(socket: BunDeviceSocket, event: TelemetryEvent) {
     const { imei, type, manufacturer, commandType, payloadParts } = event;
 
-    // Persist raw frame for diagnostic/auditing logging
-    if (event.rawFrame) {
+    // Persist raw frame for diagnostic/auditing logging if it carries data after the command type
+    const hasPayloadData = payloadParts && payloadParts.length > 0 && payloadParts.some(part => part.trim() !== '');
+    if (event.rawFrame && hasPayloadData) {
       await DbService.insertRawFrame(imei, event.rawFrame, socket.remoteAddress);
     }
 
