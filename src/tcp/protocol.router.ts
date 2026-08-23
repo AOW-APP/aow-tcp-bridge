@@ -82,7 +82,7 @@ export class ProtocolRouter {
           });
 
           // Asynchronously query self-hosted database for celdas locations
-          LbsService.resolveCellTower(mcc, mnc, lac, cellId)
+          LbsService.resolveCellTower(mcc, mnc, lac, cellId, event.commandType)
             .then(async (coords) => {
               if (coords) {
                 console.log(`   📍 [LBS Resolved] -> Lat: ${coords.lat}, Lon: ${coords.lon}`);

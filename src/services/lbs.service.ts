@@ -36,8 +36,9 @@ export class LbsService {
   /**
    * Resolves the latitude and longitude of a cell tower using the self-hosted cell_towers database in Supabase.
    */
-  public static async resolveCellTower(mcc: number, mnc: number, lac: number, cellId: number) {
+  public static async resolveCellTower(mcc: number, mnc: number, lac: number, cellId: number, commandType?: string) {
     try {
+      // 1. Attempt to query local cache database
       const { data, error } = await supabase
         .from('cell_towers')
         .select('location')
@@ -48,38 +49,53 @@ export class LbsService {
         .limit(1);
 
       if (error) throw error;
-      if (!data || data.length === 0) return null;
 
-      const loc = data[0].location as any;
-      
-      // 1. Handle standard PostgREST GeoJSON format: { type: "Point", coordinates: [longitude, latitude] }
-      if (loc && loc.type === 'Point' && Array.isArray(loc.coordinates)) {
-        return {
-          lon: loc.coordinates[0],
-          lat: loc.coordinates[1]
-        };
-      }
-      
-      // 2. Handle HexEWKB binary format
-      if (typeof loc === 'string') {
-        const parsedPoint = this.parseHexEWKBPoint(loc);
-        if (parsedPoint) return parsedPoint;
-
-        // Fallback if PostgREST returns a WKT string (e.g. "POINT(-3.70379 40.416775)")
-        const wktMatch = loc.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/i);
-        if (wktMatch) {
+      if (data && data.length > 0) {
+        const loc = data[0].location as any;
+        
+        // Handle standard PostgREST GeoJSON format: { type: "Point", coordinates: [longitude, latitude] }
+        if (loc && loc.type === 'Point' && Array.isArray(loc.coordinates)) {
           return {
-            lon: parseFloat(wktMatch[1]),
-            lat: parseFloat(wktMatch[2])
+            lon: loc.coordinates[0],
+            lat: loc.coordinates[1]
           };
         }
+        
+        // Handle HexEWKB binary format or WKT string
+        if (typeof loc === 'string') {
+          const parsedPoint = this.parseHexEWKBPoint(loc);
+          if (parsedPoint) return parsedPoint;
+
+          // Fallback if PostgREST returns a WKT string (e.g. "POINT(-3.70379 40.416775)")
+          const wktMatch = loc.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/i);
+          if (wktMatch) {
+            return {
+              lon: parseFloat(wktMatch[1]),
+              lat: parseFloat(wktMatch[2])
+            };
+          }
+        }
+        return null;
       }
       
-      // Fallback: If not found locally, query Unwired Labs API if API key is provided in environmental variables
+      // 2. Fallback: If not found locally, query Unwired Labs API if key is available
       const unwiredToken = process.env.UNWIREDLABS_API_KEY;
       if (unwiredToken) {
         console.log(`[LBS Resolver] Cell ID ${cellId} not found locally. Querying Unwired Labs API...`);
-        const radio = cellId > 65535 ? 'lte' : 'gsm';
+        
+        let radio = 'gsm';
+        if (commandType) {
+          const typeUpper = commandType.toUpperCase();
+          if (typeUpper.includes('LTE')) {
+            radio = 'lte';
+          } else if (typeUpper.includes('WCDMA')) {
+            radio = 'umts';
+          } else {
+            radio = cellId > 65535 ? 'lte' : 'gsm';
+          }
+        } else {
+          radio = cellId > 65535 ? 'lte' : 'gsm';
+        }
         
         try {
           const response = await fetch('https://us1.unwiredlabs.com/v2/process.php', {
