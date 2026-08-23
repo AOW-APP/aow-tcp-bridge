@@ -75,6 +75,70 @@ export class LbsService {
         }
       }
       
+      // Fallback: If not found locally, query Unwired Labs API if API key is provided in environmental variables
+      const unwiredToken = process.env.UNWIREDLABS_API_KEY;
+      if (unwiredToken) {
+        console.log(`[LBS Resolver] Cell ID ${cellId} not found locally. Querying Unwired Labs API...`);
+        const radio = cellId > 65535 ? 'lte' : 'gsm';
+        
+        try {
+          const response = await fetch('https://us1.unwiredlabs.com/v2/process.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              token: unwiredToken,
+              radio: radio,
+              mcc: mcc,
+              mnc: mnc,
+              cells: [{
+                lac: lac,
+                cid: cellId
+              }],
+              address: 0
+            })
+          });
+
+          if (response.ok) {
+            const result = (await response.json()) as any;
+            if (result && result.status === 'ok') {
+              const lat = parseFloat(result.lat);
+              const lon = parseFloat(result.lon);
+              const range = result.accuracy ?? 1000;
+              
+              console.log(`[LBS Resolver] Found cell via Unwired Labs: Lat: ${lat}, Lon: ${lon}, Accuracy: ${range}m`);
+
+              // Cache the result in the local cell_towers table to avoid calling the API again for this cell
+              try {
+                const { error: cacheError } = await supabase.from('cell_towers').insert({
+                  mcc,
+                  mnc,
+                  lac,
+                  cell_id: cellId,
+                  location: `POINT(${lon} ${lat})`,
+                  range,
+                  samples: 1,
+                  updated_at: new Date().toISOString()
+                });
+                if (cacheError) throw cacheError;
+                console.log(`[LBS Resolver] Cached cell ID ${cellId} locally.`);
+              } catch (cacheErr: any) {
+                console.error(`[LBS Resolver] Failed to cache cell in database:`, cacheErr.message);
+              }
+
+              return { lon, lat };
+            } else {
+              console.warn(`[LBS Resolver] Unwired Labs returned status: ${result?.status} - ${result?.message}`);
+            }
+          } else {
+            console.error(`[LBS Resolver] Unwired Labs HTTP error: ${response.status}`);
+          }
+        } catch (fetchErr: any) {
+          console.error(`[LBS Resolver] Failed to contact Unwired Labs API:`, fetchErr.message);
+        }
+      }
+      
       return null;
     } catch (error: any) {
       console.error(`[LBS Resolver] Error querying cell tower database:`, error.message);
