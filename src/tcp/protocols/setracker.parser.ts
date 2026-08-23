@@ -226,7 +226,7 @@ export class SeTrackerParser implements IProtocolParser {
       }
 
       case 'oxygen': {
-        const [_, spO2Str] = parts;
+        const spO2Str = parts.length >= 3 ? parts[2] : parts[1];
         baseEvent.type = 'BIOMETRICS';
         baseEvent.biometrics = {
           spo2: spO2Str ? parseInt(spO2Str, 10) : undefined
