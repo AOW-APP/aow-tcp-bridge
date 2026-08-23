@@ -106,11 +106,12 @@ export class SeTrackerParser implements IProtocolParser {
 
     switch (commandType) {
       case 'LK': {
-        const [_, gsmSignalStr, batteryPercentStr, stepsStr] = parts;
         baseEvent.type = 'HEARTBEAT';
-        baseEvent.gsmSignal = gsmSignalStr ? parseInt(gsmSignalStr, 10) : undefined;
-        baseEvent.battery = batteryPercentStr ? parseInt(batteryPercentStr, 10) : undefined;
-        baseEvent.steps = stepsStr ? parseInt(stepsStr, 10) : undefined;
+        if (parts.length >= 4) {
+          const [_, stepsStr, tumblingStr, batteryPercentStr] = parts;
+          baseEvent.steps = stepsStr ? parseInt(stepsStr, 10) : undefined;
+          baseEvent.battery = batteryPercentStr ? parseInt(batteryPercentStr, 10) : undefined;
+        }
         return baseEvent;
       }
 
