@@ -116,7 +116,8 @@ export class SeTrackerParser implements IProtocolParser {
 
       case 'UD':
       case 'UD2':
-      case 'UD_LTE': {
+      case 'UD_LTE':
+      case 'UD_WCDMA': {
         const [
           _, date, time, gpsState, latStr, latDir, lonStr, lonDir, 
           speedStr, direction, altitude, satellites, gsmSignalStr, batteryPercentStr, stepsStr
@@ -149,7 +150,8 @@ export class SeTrackerParser implements IProtocolParser {
       }
 
       case 'AL':
-      case 'AL_LTE': {
+      case 'AL_LTE':
+      case 'AL_WCDMA': {
         const [
           _, date, time, gpsState, latStr, latDir, lonStr, lonDir, 
           speedStr, direction, altitude, satellites, gsmSignalStr, batteryPercentStr, stepsStr
@@ -232,8 +234,7 @@ export class SeTrackerParser implements IProtocolParser {
         return baseEvent;
       }
 
-      case 'btemp2':
-      case 'bodytemp2': {
+      case 'btemp2': {
         const tempStr = parts.length >= 3 ? parts[2] : parts[1];
         baseEvent.type = 'BIOMETRICS';
         baseEvent.biometrics = {
