@@ -138,12 +138,12 @@ export class SeTrackerParser implements IProtocolParser {
             gpsState,
             speed: speedStr ? parseFloat(speedStr) : 0
           };
-        } else if (parts[18] && parts[19] && parts[20] && parts[21]) {
+        } else if (parts[19] && parts[20] && parts[21] && parts[22]) {
           baseEvent.lbs = {
-            mcc: parseInt(parts[18], 10),
-            mnc: parseInt(parts[19], 10),
-            lac: parseInt(parts[20], 10),
-            cellId: parseInt(parts[21], 10)
+            mcc: parseInt(parts[19], 10),
+            mnc: parseInt(parts[20], 10),
+            lac: parseInt(parts[21], 10),
+            cellId: parseInt(parts[22], 10)
           };
         }
         return baseEvent;
@@ -173,12 +173,12 @@ export class SeTrackerParser implements IProtocolParser {
             gpsState,
             speed: speedStr ? parseFloat(speedStr) : 0
           };
-        } else if (parts[18] && parts[19] && parts[20] && parts[21]) {
+        } else if (parts[19] && parts[20] && parts[21] && parts[22]) {
           baseEvent.lbs = {
-            mcc: parseInt(parts[18], 10),
-            mnc: parseInt(parts[19], 10),
-            lac: parseInt(parts[20], 10),
-            cellId: parseInt(parts[21], 10)
+            mcc: parseInt(parts[19], 10),
+            mnc: parseInt(parts[20], 10),
+            lac: parseInt(parts[21], 10),
+            cellId: parseInt(parts[22], 10)
           };
         }
         return baseEvent;
