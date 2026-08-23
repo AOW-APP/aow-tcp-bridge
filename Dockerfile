@@ -21,5 +21,5 @@ COPY . .
 
 # run the app
 USER bun
-EXPOSE 9001 3000
+EXPOSE 9005 3000
 ENTRYPOINT [ "bun", "run", "start" ]
