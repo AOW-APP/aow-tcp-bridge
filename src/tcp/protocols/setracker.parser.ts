@@ -232,8 +232,9 @@ export class SeTrackerParser implements IProtocolParser {
         return baseEvent;
       }
 
-      case 'btemp2': {
-        const [_, tempStr] = parts;
+      case 'btemp2':
+      case 'bodytemp2': {
+        const tempStr = parts.length >= 3 ? parts[2] : parts[1];
         baseEvent.type = 'BIOMETRICS';
         baseEvent.biometrics = {
           temperature: tempStr ? parseFloat(tempStr) : undefined
