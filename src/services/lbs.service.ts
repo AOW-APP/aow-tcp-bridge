@@ -128,6 +128,7 @@ export class LbsService {
               // Cache the result in the local cell_towers table to avoid calling the API again for this cell
               try {
                 const { error: cacheError } = await supabase.from('cell_towers').insert({
+                  radio: radio.toUpperCase(),
                   mcc,
                   mnc,
                   lac,
