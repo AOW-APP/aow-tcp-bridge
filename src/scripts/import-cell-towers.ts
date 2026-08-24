@@ -1,5 +1,7 @@
 import { createGunzip } from 'node:zlib';
 import { createReadStream, existsSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import readline from 'node:readline';
 import { supabase } from '../supabase.ts';
 
@@ -23,7 +25,7 @@ async function run() {
   // Iterate over each MCC to download and import country-specific datasets (much faster and lighter)
   for (const mcc of ALLOWED_MCCS) {
     const filename = `${mcc}.csv.gz`;
-    const localFilePath = `./${filename}`;
+    const localFilePath = join(tmpdir(), filename);
     const downloadUrl = `https://opencellid.org/ocid/downloads?token=${OPENCELLID_API_KEY}&type=mcc&file=${filename}`;
 
     console.log(`\n--------------------------------------------`);
